@@ -21,6 +21,11 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.annotation.TargetApi;
+import android.os.Build;
+import android.app.NotificationChannel;
+import java.util.List;
+
 import java.util.Map;
 
 public class FCMPlugin extends CordovaPlugin {
@@ -29,13 +34,16 @@ public class FCMPlugin extends CordovaPlugin {
     public static String tokenRefreshCallBack = "FCMPlugin.onTokenRefreshReceived";
     public static Boolean notificationCallBackReady = false;
     public static Map<String, Object> lastPush = null;
+    private static boolean inForeground = false;
 
     protected Context context = null;
     protected static OnFinishedListener<JSONObject> notificationFn = null;
     public static final String TAG = "FCMPlugin";
     private static CordovaPlugin instance = null;
 
-    public FCMPlugin() {}
+    public FCMPlugin() {
+    }
+
     public FCMPlugin(Context context) {
         this.context = context;
     }
@@ -72,18 +80,21 @@ public class FCMPlugin extends CordovaPlugin {
     public void initialize(CordovaInterface cordova, CordovaWebView webView) {
         super.initialize(cordova, webView);
         gWebView = webView;
+        inForeground = true;
         Log.d(TAG, "==> FCMPlugin initialize");
 
         FirebaseMessaging.getInstance().subscribeToTopic("android");
         FirebaseMessaging.getInstance().subscribeToTopic("all");
     }
 
-    public boolean execute(final String action, final JSONArray args, final CallbackContext callbackContext) throws JSONException {
+    public boolean execute(final String action, final JSONArray args, final CallbackContext callbackContext)
+            throws JSONException {
         Log.d(TAG, "==> FCMPlugin execute: " + action);
 
         try {
             // READY //
             if (action.equals("ready")) {
+                createDefaultNotificationChannelIfNeeded();
                 callbackContext.success();
             }
             // GET TOKEN //
@@ -131,7 +142,8 @@ public class FCMPlugin extends CordovaPlugin {
                     public void run() {
                         try {
                             Context context = cordova.getActivity();
-                            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+                            NotificationManager nm = (NotificationManager) context
+                                    .getSystemService(Context.NOTIFICATION_SERVICE);
                             nm.cancelAll();
                             callbackContext.success();
                         } catch (Exception e) {
@@ -159,14 +171,16 @@ public class FCMPlugin extends CordovaPlugin {
     }
 
     public void registerNotification(CallbackContext callbackContext) {
-        if (lastPush != null) FCMPlugin.sendPushPayload(lastPush);
+        if (lastPush != null)
+            FCMPlugin.sendPushPayload(lastPush);
         lastPush = null;
         callbackContext.success();
     }
 
     public void registerNotification(OnFinishedListener<JSONObject> callback) {
         notificationFn = callback;
-        if (lastPush != null) FCMPlugin.sendPushPayload(lastPush);
+        if (lastPush != null)
+            FCMPlugin.sendPushPayload(lastPush);
         lastPush = null;
     }
 
@@ -176,27 +190,27 @@ public class FCMPlugin extends CordovaPlugin {
 
     public void getToken(final TokenListeners<String, JSONObject> callback) {
         try {
-            FirebaseInstanceId.getInstance().getInstanceId().addOnCompleteListener(new OnCompleteListener<InstanceIdResult>() {
-                @Override
-                public void onComplete(Task<InstanceIdResult> task) {
-                    if (!task.isSuccessful()) {
-                        Log.w(TAG, "getInstanceId failed", task.getException());
-                        try {
-                            callback.error(exceptionToJson(task.getException()));
-                        }
-                        catch (JSONException jsonErr) {
-                            Log.e(TAG, "Error when parsing json", jsonErr);
-                        }
-                        return;
-                    }
+            FirebaseInstanceId.getInstance().getInstanceId()
+                    .addOnCompleteListener(new OnCompleteListener<InstanceIdResult>() {
+                        @Override
+                        public void onComplete(Task<InstanceIdResult> task) {
+                            if (!task.isSuccessful()) {
+                                Log.w(TAG, "getInstanceId failed", task.getException());
+                                try {
+                                    callback.error(exceptionToJson(task.getException()));
+                                } catch (JSONException jsonErr) {
+                                    Log.e(TAG, "Error when parsing json", jsonErr);
+                                }
+                                return;
+                            }
 
-                    // Get new Instance ID token
-                    String newToken = task.getResult().getToken();
+                            // Get new Instance ID token
+                            String newToken = task.getResult().getToken();
 
-                    Log.i(TAG, "\tToken: " + newToken);
-                    callback.success(newToken);
-                }
-            });
+                            Log.i(TAG, "\tToken: " + newToken);
+                            callback.success(newToken);
+                        }
+                    });
 
             FirebaseInstanceId.getInstance().getInstanceId().addOnFailureListener(new OnFailureListener() {
                 @Override
@@ -213,7 +227,8 @@ public class FCMPlugin extends CordovaPlugin {
             Log.w(TAG, "\tError retrieving token", e);
             try {
                 callback.error(exceptionToJson(e));
-            } catch(JSONException je) {}
+            } catch (JSONException je) {
+            }
         }
     }
 
@@ -283,15 +298,55 @@ public class FCMPlugin extends CordovaPlugin {
     @Override
     public void onDestroy() {
         gWebView = null;
+        inForeground = false;
         notificationCallBackReady = false;
     }
 
     protected Context getContext() {
         context = cordova != null ? cordova.getActivity().getBaseContext() : context;
         if (context == null) {
-            throw new RuntimeException("The Android Context is required. Verify if the 'activity' or 'context' are passed by constructor");
+            throw new RuntimeException(
+                    "The Android Context is required. Verify if the 'activity' or 'context' are passed by constructor");
         }
 
         return context;
+    }
+
+    @TargetApi(26)
+    private void createDefaultNotificationChannelIfNeeded() {
+        String id;
+        String DEFAULT_CHANNEL_ID = "JMobile_DEFAULT_CHANNEL_ID";
+        // only call on Android O and above
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            final NotificationManager notificationManager = (NotificationManager) cordova.getActivity()
+                    .getSystemService(Context.NOTIFICATION_SERVICE);
+            List<NotificationChannel> channels = notificationManager.getNotificationChannels();
+
+            for (int i = 0; i < channels.size(); i++) {
+                id = channels.get(i).getId();
+                if (id.equals(DEFAULT_CHANNEL_ID)) {
+                    return;
+                }
+            }
+            NotificationChannel mChannel = new NotificationChannel(DEFAULT_CHANNEL_ID, "JMobile channel", NotificationManager.IMPORTANCE_HIGH);
+            mChannel.setShowBadge(true);
+            notificationManager.createNotificationChannel(mChannel);
+        }
+    }
+
+    @Override
+    public void onPause(boolean multitasking) {
+        super.onPause(multitasking);
+        inForeground = false;
+    }
+
+    @Override
+    public void onResume(boolean multitasking) {
+        super.onResume(multitasking);
+        inForeground = true;
+    }
+
+    public static boolean isInForeground() {
+        return inForeground;
     }
 }
