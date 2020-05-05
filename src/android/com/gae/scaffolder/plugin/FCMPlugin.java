@@ -28,6 +28,8 @@ import java.util.List;
 
 import java.util.Map;
 
+import me.leolin.shortcutbadger.ShortcutBadger;
+
 public class FCMPlugin extends CordovaPlugin {
     public static CordovaWebView gWebView;
     public static String notificationCallBack = "FCMPlugin.onNotificationReceived";
@@ -348,5 +350,15 @@ public class FCMPlugin extends CordovaPlugin {
 
     public static boolean isInForeground() {
         return inForeground;
+    }
+    /*
+     * Sets badge count on application icon and in SharedPreferences
+     */
+    public static void setApplicationIconBadgeNumber(Context context, int badgeCount) {
+        if (badgeCount > 0) {
+            ShortcutBadger.applyCount(context, badgeCount);
+        } else {
+            ShortcutBadger.removeCount(context);
+        }
     }
 }

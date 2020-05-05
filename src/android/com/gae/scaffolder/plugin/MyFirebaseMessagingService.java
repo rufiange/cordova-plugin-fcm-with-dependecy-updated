@@ -43,15 +43,19 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     /**
      * Called when message is received.
      *
-     * @param remoteMessage Object representing the message received from Firebase Cloud Messaging.
+     * @param remoteMessage Object representing the message received from Firebase
+     *                      Cloud Messaging.
      */
     // [START receive_message]
     @Override
     public void onMessageReceived(RemoteMessage remoteMessage) {
         // TODO(developer): Handle FCM messages here.
-        // If the application is in the foreground handle both data and notification messages here.
-        // Also if you intend on generating your own notifications as a result of a received FCM
-        // message, here is where that should be initiated. See sendNotification method below.
+        // If the application is in the foreground handle both data and notification
+        // messages here.
+        // Also if you intend on generating your own notifications as a result of a
+        // received FCM
+        // message, here is where that should be initiated. See sendNotification method
+        // below.
         Log.d(TAG, "==> MyFirebaseMessagingService onMessageReceived");
         Bundle extras = new Bundle();
         Context context = getApplicationContext();
@@ -77,10 +81,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
         Log.d(TAG, "\tNotification Data: " + data.toString());
 
-        if(FCMPlugin.isInForeground()){
+        if (FCMPlugin.isInForeground()) {
             FCMPlugin.sendPushPayload(data);
         } else {
-            showNotification(context,extras);
+            showNotification(context, extras);
         }
     }
     // [END receive_message]
@@ -98,7 +102,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
             Log.d(TAG, "key = " + key);
 
-            // If normalizeKeythe key is "data" or "message" and the value is a json object extract
+            // If normalizeKeythe key is "data" or "message" and the value is a json object
+            // extract
             // This is to support parse.com and other services. Issue #147 and pull #218
             if (key.equals("data") || key.equals("message") || key.equals(messageKey)) {
                 Object json = extras.get(key);
@@ -108,8 +113,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     try {
                         // If object contains message keys promote each value to the root of the bundle
                         JSONObject data = new JSONObject((String) json);
-                        if (data.has("alert") || data.has("message") || data.has("body") || data.has("title") || data.has(messageKey)
-                                || data.has(titleKey)) {
+                        if (data.has("alert") || data.has("message") || data.has("body") || data.has("title")
+                                || data.has(messageKey) || data.has(titleKey)) {
                             Iterator<String> jsonIter = data.keys();
                             while (jsonIter.hasNext()) {
                                 String jsonKey = jsonIter.next();
@@ -258,9 +263,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         }
     }
 
-    private void showNotification(Context context, Bundle extras){
+    private void showNotification(Context context, Bundle extras) {
 
-        final NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        final NotificationManager notificationManager = (NotificationManager) getSystemService(
+                Context.NOTIFICATION_SERVICE);
 
         extras = normalizeExtras(context, extras, "message", "title");
         int notId = parseInt("notId", extras);
@@ -277,25 +283,38 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
         int iconId = 0;
         String icon = "fcm_push_push";
-        iconId = context.getResources().getIdentifier(icon,"DRAWABLE",context.getPackageName());
-        if(iconId == 0){
+        iconId = context.getResources().getIdentifier(icon, "DRAWABLE", context.getPackageName());
+        if (iconId == 0) {
             Log.d(TAG, "icon mipmap");
-            iconId = context.getResources().getIdentifier(icon,"mipmap",context.getPackageName());
+            iconId = context.getResources().getIdentifier(icon, "mipmap", context.getPackageName());
         }
-        if(iconId == 0){
+        if (iconId == 0) {
             Log.d(TAG, "get application info icon");
             iconId = context.getApplicationInfo().icon;
         }
         String message = extras.getString("message");
         String title = extras.getString("title");
-        Integer count = Integer.parseInt(extras.getString("unreadAlertCount"));
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext(), "JMobile_DEFAULT_CHANNEL_ID")
-                .setContentTitle(title)
-                .setContentText(message)
-                .setSmallIcon(iconId)
-                .setContentIntent(contentIntent)
-                .setNumber(count)
-                .setPriority(NotificationCompat.PRIORITY_HIGH);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext(),
+                "JMobile_DEFAULT_CHANNEL_ID").setContentTitle(title).setContentText(message).setSmallIcon(iconId)
+                        .setContentIntent(contentIntent)
+                        .setPriority(NotificationCompat.PRIORITY_HIGH);
+
+        int badgeCount = -1;
+        String msgcnt = extras.getString("unreadAlertCount");
+        if (msgcnt != null) {
+            badgeCount = Integer.parseInt(msgcnt);
+        }
+        if (badgeCount >= 0) {
+            Log.d(TAG, "badgeCount =[" + badgeCount + "]");
+            builder.setNumber(badgeCount);
+            FCMPlugin.setApplicationIconBadgeNumber(context, badgeCount);
+        }
+        if (badgeCount == 0) {
+            NotificationManager mNotificationManager = (NotificationManager) getSystemService(
+                    Context.NOTIFICATION_SERVICE);
+            mNotificationManager.cancelAll();
+        }
 
         // notificationId is a unique int for each notification that you must define
         notificationManager.notify(notId, builder.build());
