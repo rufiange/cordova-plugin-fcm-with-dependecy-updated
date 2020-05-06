@@ -281,17 +281,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         PendingIntent contentIntent = PendingIntent.getActivity(this, requestCode, notificationIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT);
 
-        int iconId = 0;
-        String icon = "fcm_push_push";
-        iconId = context.getResources().getIdentifier(icon, "DRAWABLE", context.getPackageName());
-        if (iconId == 0) {
-            Log.d(TAG, "icon mipmap");
-            iconId = context.getResources().getIdentifier(icon, "mipmap", context.getPackageName());
-        }
-        if (iconId == 0) {
-            Log.d(TAG, "get application info icon");
-            iconId = context.getApplicationInfo().icon;
-        }
+        int iconId =  context.getApplicationInfo().icon;
         String message = extras.getString("message");
         String title = extras.getString("title");
 
