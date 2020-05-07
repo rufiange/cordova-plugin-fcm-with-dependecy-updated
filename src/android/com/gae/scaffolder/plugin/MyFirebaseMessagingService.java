@@ -267,7 +267,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
         final NotificationManager notificationManager = (NotificationManager) getSystemService(
                 Context.NOTIFICATION_SERVICE);
-
+        String packageName = context.getPackageName();
+        Resources resources = context.getResources();
         extras = normalizeExtras(context, extras, "message", "title");
         int notId = parseInt("notId", extras);
 
@@ -281,14 +282,27 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         PendingIntent contentIntent = PendingIntent.getActivity(this, requestCode, notificationIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT);
 
-        int iconId =  context.getApplicationInfo().icon;
+        int iconId =  0;
+        String icon = "ic_notification";
+        if (icon != null && !"".equals(icon)) {
+            iconId = resources.getIdentifier(icon, "drawable", packageName);
+            Log.d(TAG, "using ic_notification "+ iconId);
+        }
+        if (iconId == 0) {
+            Log.d(TAG, "no icon resource found - using application icon");
+            iconId = context.getApplicationInfo().icon;
+        }
+
         String message = extras.getString("message");
         String title = extras.getString("title");
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext(),
-                "JMobile_DEFAULT_CHANNEL_ID").setContentTitle(title).setContentText(message).setSmallIcon(iconId)
-                        .setContentIntent(contentIntent)
-                        .setPriority(NotificationCompat.PRIORITY_HIGH);
+                "JMobile_DEFAULT_CHANNEL_ID")
+                .setContentTitle(title)
+                .setContentText(message)
+                .setContentIntent(contentIntent)
+                .setSmallIcon(iconId)
+                .setPriority(NotificationCompat.PRIORITY_HIGH);
 
         int badgeCount = -1;
         String msgcnt = extras.getString("unreadAlertCount");
