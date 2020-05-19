@@ -156,8 +156,14 @@ fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler {
             NSDictionary *userInfoMutable = [userInfo mutableCopy];
             [userInfoMutable setValue:@(NO) forKey:@"wasTapped"];
             NSLog(@"app active");
-            lastPush = [NSJSONSerialization dataWithJSONObject:userInfoMutable options:0 error:&error];
-        }
+            lastPush = [NSJSONSerialization dataWithJSONObject:userInfoMutable options:0 error:&error];        
+        } else if(application.applicationState == UIApplicationStateInactive) {
+             NSError *error;
+             NSDictionary *userInfoMutable = [userInfo mutableCopy];
+             [userInfoMutable setValue:@(YES) forKey:@"wasTapped"];
+             NSLog(@"app opened by user tap");
+             lastPush = [NSJSONSerialization dataWithJSONObject:userInfoMutable options:0 error:&error];
+         } 
 
         completionHandler(UIBackgroundFetchResultNoData);
         return;
