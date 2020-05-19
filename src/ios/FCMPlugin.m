@@ -135,6 +135,7 @@ static FCMPlugin *fcmPluginInstance;
     NSString* notifyJS = [NSString stringWithFormat:@"%@(%@);", notificationCallback, JSONString];
     NSLog(@"stringByEvaluatingJavaScriptFromString %@", notifyJS);
     [self runJS:notifyJS];
+    [AppDelegate setLastPush:nil]; // Notification Callback Sent - Clear last stored push message. 
 }
 
 - (void)notifyFCMTokenRefresh:(NSString *)token {

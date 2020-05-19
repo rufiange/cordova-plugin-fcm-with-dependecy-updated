@@ -214,7 +214,8 @@ fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler {
 
 + (NSData*)getLastPush {
     NSData* returnValue = lastPush;
-    lastPush = nil;
+    // Do not automatically clear the last message (may lose them e.g. when app is cold started)
+    // lastPush = nil;
     return returnValue;
 }
 
